@@ -1,7 +1,7 @@
 // #[macro_use] extern crate rocket;
 // use serde::Deserialize;
 use std::{env, ffi::{OsStr, OsString}, str::FromStr};
-
+use ::http::{Request,Response};
 
 
 
@@ -22,18 +22,29 @@ fn get_env( k:&str ) -> String {
         None => String::from("")
     }
 }
+#[derive(Debug)]
+struct SfCred {
+    sf_id:String,
+    sf_sct:String
+}
+
+impl SfCred {
+    fn get_token(&self) -> String{
+        format!("id {}",2)
+    }
+    
+}
 
 fn main() -> (){
-    
-    struct SfCred {
-        sf_id:String,
-        sf_sct:String 
-    }
 
     let sf_t  = SfCred{
         sf_id : get_env( "sf_id" ),
-        sf_sct: get_env( "sf_sct" ) 
+        sf_sct: get_env( "sf_sct" ),
     };
 
-    println!("{}\n{}",sf_t.sf_id,sf_t.sf_sct)
+    println!("{}",sf_t.get_token());
+
+    let rqst = Request::get("https://www.rust-lang.org/").body(()).unwrap();
+
+    println!("{:?}",rqst)
 }
