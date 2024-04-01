@@ -28,9 +28,14 @@ fn get_env(k: &str) -> String {
 }
 
 trait Spotify {
-    async fn get_data(token: &String, route: &'static str, id: &'static str) {
+    async fn get_data(
+        credencial: &mut SfCred,
+        route: &'static str,
+        id: &'static str,
+    ) -> serde_json::Map<std::string::String, serde_json::Value> {
+        credencial.get_token().await;
         let url = format!("https://api.spotify.com/v1/{}/{}", route, id);
-        let header = format!("Bearer {}", token);
+        let header = format!("Bearer {}", credencial.sf_token.access_token);
         let cli = reqwest::Client::new();
         let res = cli
             .get(url)
@@ -38,31 +43,45 @@ trait Spotify {
             .send()
             .await
             .unwrap();
-        let a:serde_json::Value = res.json().await.unwrap();
-        println!("{:?}",&a.as_object().unwrap().get("id"))
-
-       
+        let a: serde_json::Value = res.json().await.unwrap();
+        a.as_object().unwrap().clone()
     }
 }
 
-impl Spotify for SpotifyAlbum {
-    
+impl Spotify for SpotifyAlbum {}
+
+impl SpotifyAlbum {
+    async fn new(cred: &mut SfCred, id: &'static str) -> SpotifyAlbum {
+        let data = SpotifyAlbum::get_data(cred, "albums", &id).await;
+        SpotifyAlbum {
+            id: data.get("id").unwrap().to_string(),
+            name: data.get("name").unwrap().to_string(),
+            tracks: data
+                .get("tracks")
+                .unwrap()
+                .get("items")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .into_iter()
+                .map(|x| x.get("name").unwrap().to_string())
+                .collect(),
+            total_tracks: data.get("total_tracks").unwrap().as_u64().unwrap(),
+            images: vec![String::from("value")],
+        }
+    }
 }
-
-
 #[derive(Deserialize, Debug)]
 struct SpotifyAlbum {
     id: String,
     name: String,
-    tracks: Vec<SpotifyTrack>,
-    total_tracks: u32,
-    images: Vec<String>,
-    artists: Vec<SpotifyArtist>,
-    genre: Vec<String>,
-    uri: String,
+    tracks: Vec<String>,
+    total_tracks: u64,
+    images: Vec<String> //     artists: Vec<SpotifyArtist>,
+                         //     genre: Vec<String>,
+                         //     uri: String,
 }
 
-impl SpotifyAlbum {}
 #[derive(Deserialize, Debug)]
 struct SpotifyArtist {
     id: String,
@@ -142,8 +161,10 @@ impl SfCred {
 #[tokio::main]
 async fn main() -> () {
     let mut sf_t = SfCred::new_cred();
-    sf_t.get_token().await;
-    println!("first{:?}\n", sf_t);
+    // sf_t.get_token().await;
 
-    SpotifyAlbum::get_data(&sf_t.sf_token.access_token, "tracks", "2TpxZ7JUBn3uw46aR7qd6V").await
+    // println!("first{:?}\n", sf_t);
+
+    let album = SpotifyAlbum::new(&mut sf_t, "2AoerEEC2T9YEpwSCzYpJG");
+    print!("{:?}", album.await);
 }
