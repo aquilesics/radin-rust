@@ -67,7 +67,45 @@ impl SpotifyAlbum {
                 .map(|x| x.get("name").unwrap().to_string())
                 .collect(),
             total_tracks: data.get("total_tracks").unwrap().as_u64().unwrap(),
-            images: vec![String::from("value")],
+            images: data
+                .get("images")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .into_iter()
+                .map(|x| Image {
+                    url: x.get("url").unwrap().to_string(),
+                    h: x.get("height").unwrap().as_u64().unwrap(),
+                    w: x.get("width").unwrap().as_u64().unwrap(),
+                })
+                .collect(),
+            artists: data
+                .get("artists")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .into_iter()
+                .map(|x| SpotifyArtist {
+                    id: x.get("id").unwrap().to_string(),
+                    name: x.get("name").unwrap().to_string(),
+                    genres: vec![String::from("test")],
+                    images: vec![Image {
+                        url: "".to_string(),
+                        h: 60,
+                        w: 60,
+                    }],
+                    uri: data.get("uri").unwrap().to_string(),
+                })
+                .collect(),
+            genre: data
+                .get("genres")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .into_iter()
+                .map(|x| x.to_string())
+                .collect(),
+            uri: data.get("uri").unwrap().to_string(),
         }
     }
 }
@@ -77,9 +115,17 @@ struct SpotifyAlbum {
     name: String,
     tracks: Vec<String>,
     total_tracks: u64,
-    images: Vec<String> //     artists: Vec<SpotifyArtist>,
-                         //     genre: Vec<String>,
-                         //     uri: String,
+    images: Vec<Image>,
+    artists: Vec<SpotifyArtist>,
+    genre: Vec<String>,
+    uri: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct Image {
+    url: String,
+    h: u64,
+    w: u64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -87,7 +133,7 @@ struct SpotifyArtist {
     id: String,
     name: String,
     genres: Vec<String>,
-    images: Vec<String>,
+    images: Vec<Image>,
     uri: String,
 }
 #[derive(Deserialize, Debug)]
@@ -166,5 +212,5 @@ async fn main() -> () {
     // println!("first{:?}\n", sf_t);
 
     let album = SpotifyAlbum::new(&mut sf_t, "2AoerEEC2T9YEpwSCzYpJG");
-    print!("{:?}", album.await);
+    println!("{:#?}", album.await);
 }
