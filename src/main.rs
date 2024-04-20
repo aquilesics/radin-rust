@@ -27,32 +27,28 @@ fn get_env(k: &str) -> String {
     }
 }
 
-trait Spotify {
-    async fn get_data(
-        credencial: &mut SfCred,
-        route: &'static str,
-        id: &'static str,
-    ) -> serde_json::Map<std::string::String, serde_json::Value> {
-        credencial.get_token().await;
-        let url = format!("https://api.spotify.com/v1/{}/{}", route, id);
-        let header = format!("Bearer {}", credencial.sf_token.access_token);
-        let cli = reqwest::Client::new();
-        let res = cli
-            .get(url)
-            .header(AUTHORIZATION, header)
-            .send()
-            .await
-            .unwrap();
-        let a: serde_json::Value = res.json().await.unwrap();
-        a.as_object().unwrap().clone()
-    }
+async fn make_api_request(
+    credencial: &mut SfCred,
+    route: &'static str,
+    id: &'static str,
+) -> serde_json::Map<std::string::String, serde_json::Value> {
+    credencial.get_token().await;
+    let url = format!("https://api.spotify.com/v1/{}/{}", route, id);
+    let header = format!("Bearer {}", credencial.sf_token.access_token);
+    let cli = reqwest::Client::new();
+    let res = cli
+        .get(url)
+        .header(AUTHORIZATION, header)
+        .send()
+        .await
+        .unwrap();
+    let a: serde_json::Value = res.json().await.unwrap();
+    a.as_object().unwrap().clone()
 }
-
-impl Spotify for SpotifyAlbum {}
 
 impl SpotifyAlbum {
     async fn new(cred: &mut SfCred, id: &'static str) -> SpotifyAlbum {
-        let data = SpotifyAlbum::get_data(cred, "albums", &id).await;
+        let data = make_api_request(cred, "albums", &id).await;
         SpotifyAlbum {
             id: data.get("id").unwrap().to_string(),
             name: data.get("name").unwrap().to_string(),
@@ -136,16 +132,34 @@ struct SpotifyArtist {
     images: Vec<Image>,
     uri: String,
 }
+impl SpotifyTrack {
+    async fn new<'a>(cred: &mut SfCred, id: &'static str) -> SpotifyTrack {
+        let data = make_api_request(cred, "tracks", &id).await;
+        let id_album = data
+            .get("album")
+            .unwrap()
+            .get("id")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_owned();
+
+        SpotifyTrack {
+            name: String::from("s"),
+            album: SpotifyAlbum::new(cred, id_album.clone().as_str()).await,
+        }
+    }
+}
 #[derive(Deserialize, Debug)]
 struct SpotifyTrack {
     name: String,
     album: SpotifyAlbum,
-    artists: Vec<SpotifyArtist>,
-    duration_ms: u64,
-    popularity: u8,
-    preview_url: String,
-    track_number: u32,
-    uri: String,
+    // artists: Vec<SpotifyArtist>,
+    // duration_ms: u64,
+    // popularity: u8,
+    // preview_url: String,
+    // track_number: u32,
+    // uri: String,
 }
 
 struct SpotifyPlaylist {
